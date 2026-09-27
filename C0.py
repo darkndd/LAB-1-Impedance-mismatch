@@ -36,29 +36,36 @@ def main():
             "C0 es detura per evitar duplicats."
         )
 
+    batch_size = 500
     times = []
     start_total = time.perf_counter()
 
-    # Inserim el text a ChromaDB frase per frase, mesurant el temps
-    for sentence_id, sentence in rows:
+    # Inserim el text a ChromaDB en blocs (batches), mesurant el temps
+    for i in range(0, len(rows), batch_size):
+        batch = rows[i:i + batch_size]
+        
         start = time.perf_counter()
 
         collection.add(
-            ids=[sentence_id],
-            documents=[sentence]
+            ids=[row[0] for row in batch],
+            documents=[row[1] for row in batch]
         )
 
-        times.append(time.perf_counter() - start)
+        elapsed = time.perf_counter() - start
+        
+        # Guardem el temps mitjà per frase d'aquest batch per mantenir l'estructura d'estadístiques
+        time_per_sentence = elapsed / len(batch)
+        times.extend([time_per_sentence] * len(batch))
 
     count = collection.count()
     total = time.perf_counter() - start_total
 
     print(f"Frases guardades a ChromaDB: {count}")
     print(f"Tiempo total del bucle: {total:.3f} s")
-    print(f"Tiempo mínimo por frase: {min(times):.6f} s")
-    print(f"Tiempo máximo por frase: {max(times):.6f} s")
+    print(f"Tiempo mínimo estimado por frase: {min(times):.6f} s")
+    print(f"Tiempo máximo estimado por frase: {max(times):.6f} s")
     print(f"Tiempo medio por frase: {statistics.mean(times):.6f} s")
-    print(f"Desviación estándar por frase: {statistics.stdev(times):.6f} s")
+    print(f"Desviación estándar por frase (basada en batches): {statistics.stdev(times):.6f} s")
 
 
 if __name__ == "__main__":
